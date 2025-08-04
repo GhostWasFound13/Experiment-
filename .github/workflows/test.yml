@@ -1,0 +1,60 @@
+name: Simulate Jenkins Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  simulate-jenkinsfile:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Simulate Java build
+        run: |
+          echo "📦 Simulating Java build..."
+          mkdir -p output/
+          echo "Simulated JAR from Jenkins build" > output/${{ github.sha }}.jar
+
+      - name: Generate dummy YAML (simulate Helm)
+        run: |
+          echo "📄 Simulating Helm YAML creation..."
+          mkdir -p output/
+          cat <<EOF > output/deployment.yaml
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: example-app
+          spec:
+            replicas: 1
+            template:
+              spec:
+                containers:
+                  - name: example
+                    image: your-image:latest
+          EOF
+
+      - name: Commit to output branch
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin build-output || true
+          git checkout -B build-output
+
+          mkdir -p builds/
+          cp -r output/* builds/
+
+          git add builds/
+          git commit -m "🚀 Output from GitHub Actions run: ${{ github.sha }}"
+          git push origin build-output --force
