@@ -7,6 +7,9 @@ jobs:
   simulate-jenkinsfile:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write  # IMPORTANT: This gives GITHUB_TOKEN permission to push
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -44,7 +47,9 @@ jobs:
                     image: your-image:latest
           EOF
 
-      - name: Commit to output branch
+      - name: Commit and push to build-output branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -56,5 +61,5 @@ jobs:
           cp -r output/* builds/
 
           git add builds/
-          git commit -m "🚀 Output from GitHub Actions run: ${{ github.sha }}"
-          git push origin build-output --force
+          git commit -m "🚀 Output from GitHub Actions run: ${{ github.sha }}" || echo "No changes to commit"
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:build-output --force
